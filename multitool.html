@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Tools Suite</title>
+    <!-- Tailwind CSS per lo stile -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS per la manipolazione dei file Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- Icone Lucide -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Animazione per il caricamento */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 font-sans text-slate-800">
+
+    <div class="bg-white rounded-xl shadow-xl p-8 max-w-2xl w-full">
+        
+        <!-- Tab Navigation -->
+        <div class="flex border-b border-slate-200 mb-8 overflow-x-auto">
+            <button id="tab-diff" class="flex-1 pb-4 text-center font-semibold text-blue-600 border-b-2 border-blue-600 hover:text-blue-800 transition-colors active-tab min-w-[120px]">
+                <div class="flex items-center justify-center gap-2">
+                    <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
+                    Comparatore
+                </div>
+            </button>
+            <button id="tab-avail" class="flex-1 pb-4 text-center font-semibold text-slate-500 hover:text-slate-800 transition-colors min-w-[120px]">
+                <div class="flex items-center justify-center gap-2">
+                    <i data-lucide="calculator" class="w-4 h-4"></i>
+                    Disponibili
+                </div>
+            </button>
+            <button id="tab-create" class="flex-1 pb-4 text-center font-semibold text-slate-500 hover:text-slate-800 transition-colors min-w-[120px]">
+                <div class="flex items-center justify-center gap-2">
+                    <i data-lucide="grid" class="w-4 h-4"></i>
+                    Crea Codici
+                </div>
+            </button>
+        </div>
+
+        <!-- VIEW 1: COMPARATORE -->
+        <div id="view-compare">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center justify-center gap-3">
+                    Comparatore Excel
+                </h1>
+                <p class="text-slate-500 mt-2 text-sm">
+                    Trova i valori presenti nei file sorgente ma <strong>NON</strong> nel file filtro.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Input File 1 (Multiplo) -->
+                <div class="relative group">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">1. File Sorgenti (Multiplo)</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label for="file1" class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i data-lucide="layers" class="w-8 h-8 text-blue-400 mb-2"></i>
+                                <p class="text-sm text-slate-500"><span class="font-semibold">Clicca per caricare</span> uno o più file</p>
+                                <p id="file1-name" class="text-xs text-slate-400 mt-1 font-medium h-4"></p>
+                            </div>
+                            <!-- Added 'multiple' attribute -->
+                            <input id="file1" type="file" class="hidden" accept=".xlsx, .xls, .csv" multiple />
+                        </label>
+                    </div>
+                    
+                    <!-- Switch per colonna confronto -->
+                    <div class="flex items-center justify-end mt-3">
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <span class="me-3 text-sm font-medium text-slate-600">Usa <strong class="text-blue-600">Colonna 2</strong> come chiave di confronto</span>
+                            <input type="checkbox" id="compareColSwitch" class="sr-only peer">
+                            <div class="relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Input File 2 (Singolo - Persistente) -->
+                <div class="relative group">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">2. File da Escludere (Filtro)</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label id="file2-label" for="file2" class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6" id="file2-content">
+                                <i data-lucide="file-minus" class="w-8 h-8 text-red-400 mb-2"></i>
+                                <p class="text-sm text-slate-500"><span class="font-semibold">Clicca per caricare</span> il file filtro</p>
+                                <p id="file2-name" class="text-xs text-slate-400 mt-1 font-medium h-4"></p>
+                            </div>
+                            <input id="file2" type="file" class="hidden" accept=".xlsx, .xls, .csv" />
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Azione -->
+                <button id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-lg shadow transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span>Confronta e Scarica Risultato</span>
+                    <i data-lucide="arrow-right-circle" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 2: AVAILABLE CODE -->
+        <div id="view-available" class="hidden">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center justify-center gap-3">
+                    Trova Codici Liberi
+                </h1>
+                <p class="text-slate-500 mt-2 text-sm">
+                    Genera codici a 4 cifre (Prefisso + Combinazioni) ed escludi quelli già presenti nel file Excel.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Input Prefisso -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Prefisso (2 caratteri)</label>
+                    <input type="text" id="prefixInput" maxlength="2" placeholder="Es. AA" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase font-mono text-lg tracking-widest text-center">
+                </div>
+
+                <!-- Input File Codici Occupati -->
+                <div class="relative group">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">File Codici Occupati (Excel)</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label for="fileOccupied" class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i data-lucide="database" class="w-8 h-8 text-slate-400 mb-2"></i>
+                                <p class="text-sm text-slate-500"><span class="font-semibold">Clicca per caricare</span> il file</p>
+                                <p id="fileOccupied-name" class="text-xs text-green-600 mt-1 font-medium h-4"></p>
+                            </div>
+                            <input id="fileOccupied" type="file" class="hidden" accept=".xlsx, .xls, .csv" />
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Azione -->
+                <button id="generateBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-lg shadow transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span>Calcola Disponibili e Scarica</span>
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 3: CREATE CODES (NEW) -->
+        <div id="view-create" class="hidden">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center justify-center gap-3">
+                    Generatore Completo
+                </h1>
+                <p class="text-slate-500 mt-2 text-sm">
+                    Genera e scarica <strong>tutte</strong> le combinazioni possibili per un prefisso dato.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Input Prefisso -->
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Prefisso (2 caratteri)</label>
+                    <input type="text" id="createPrefixInput" maxlength="2" placeholder="Es. BB" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase font-mono text-lg tracking-widest text-center">
+                </div>
+
+                <!-- Azione -->
+                <button id="createBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-lg shadow transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span>Genera Codici e Scarica</span>
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Status Messages (Shared) -->
+        <div id="statusMessage" class="hidden mt-6 p-4 rounded-lg text-sm text-center"></div>
+    </div>
+
+    <script>
+        // Inizializza icone
+        lucide.createIcons();
+
+        // --- TAB LOGIC ---
+        const tabs = {
+            diff: document.getElementById('tab-diff'),
+            avail: document.getElementById('tab-avail'),
+            create: document.getElementById('tab-create')
+        };
+        const views = {
+            diff: document.getElementById('view-compare'),
+            avail: document.getElementById('view-available'),
+            create: document.getElementById('view-create')
+        };
+        
+        const statusDiv = document.getElementById('statusMessage');
+
+        function switchTab(selectedView) {
+            statusDiv.classList.add('hidden'); // Nascondi messaggi precedenti
+            statusDiv.innerHTML = "";
+
+            // Reset all tabs styles
+            Object.values(tabs).forEach(tab => {
+                tab.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
+                tab.classList.add('text-slate-500');
+            });
+
+            // Hide all views
+            Object.values(views).forEach(view => {
+                view.classList.add('hidden');
+            });
+
+            // Activate selected
+            tabs[selectedView].classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            tabs[selectedView].classList.remove('text-slate-500');
+            views[selectedView].classList.remove('hidden');
+        }
+
+        tabs.diff.addEventListener('click', () => switchTab('diff'));
+        tabs.avail.addEventListener('click', () => switchTab('avail'));
+        tabs.create.addEventListener('click', () => switchTab('create'));
+
+        // --- SHARED FUNCTIONS ---
+        function showStatus(msg, type) {
+            statusDiv.classList.remove('hidden', 'bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700', 'bg-yellow-100', 'text-yellow-700');
+            if (type === 'error') statusDiv.classList.add('bg-red-100', 'text-red-700');
+            else if (type === 'success') statusDiv.classList.add('bg-green-100', 'text-green-700');
+            else if (type === 'warning') statusDiv.classList.add('bg-yellow-100', 'text-yellow-700');
+            statusDiv.innerHTML = msg;
+            statusDiv.classList.remove('hidden');
+        }
+
+        const readExcelFile = (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        resolve(jsonData);
+                    } catch (error) { reject(error); }
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsArrayBuffer(file);
+            });
+        };
+
+        // --- LOGICA COMPARATORE (Updated) ---
+        const file1Input = document.getElementById('file1');
+        const file2Input = document.getElementById('file2');
+        const file1NameDisplay = document.getElementById('file1-name');
+        
+        // Nuovi elementi per la gestione dello stato del file 2
+        const file2Label = document.getElementById('file2-label');
+        const file2Content = document.getElementById('file2-content');
+        const file2NameDisplay = document.getElementById('file2-name');
+        
+        const processBtn = document.getElementById('processBtn');
+        const compareColSwitch = document.getElementById('compareColSwitch'); 
+
+        // Variable to hold the persistent File 2
+        let storedExclusionFile = null;
+
+        // Listener per File 1 (Multiplo)
+        file1Input.addEventListener('change', (e) => { 
+            const files = e.target.files;
+            if(files.length > 0) {
+                if(files.length === 1) {
+                    file1NameDisplay.textContent = files[0].name;
+                    file1NameDisplay.className = "text-xs text-green-600 mt-1 font-medium h-4";
+                } else {
+                    file1NameDisplay.textContent = `${files.length} file selezionati`;
+                    file1NameDisplay.className = "text-xs text-green-600 mt-1 font-medium h-4 font-bold";
+                }
+            } else {
+                file1NameDisplay.textContent = "";
+            }
+        });
+
+        // Listener per File 2 (Persistente)
+        file2Input.addEventListener('change', (e) => { 
+            if(e.target.files[0]) {
+                storedExclusionFile = e.target.files[0];
+                updateFile2UI(storedExclusionFile.name);
+            }
+        });
+
+        // Funzione per aggiornare UI del File 2 quando "in memoria"
+        function updateFile2UI(filename) {
+            // Cambia stile bordi e sfondo
+            file2Label.className = "flex flex-col items-center justify-center w-full h-32 border-2 border-green-500 border-dashed rounded-lg cursor-pointer bg-green-50 hover:bg-green-100 transition-colors relative";
+            
+            // Aggiorna contenuto
+            file2Content.innerHTML = `
+                <i data-lucide="check-circle" class="w-8 h-8 text-green-600 mb-2"></i>
+                <p class="text-sm text-green-700 font-bold">File Filtro in Memoria</p>
+                <p class="text-xs text-green-600 mt-1 font-medium break-all px-2 text-center">${filename}</p>
+                <span class="absolute top-2 right-2 text-[10px] bg-white text-green-600 px-2 py-1 rounded-full border border-green-200">Clicca per sostituire</span>
+            `;
+            lucide.createIcons();
+        }
+
+        processBtn.addEventListener('click', async () => {
+            const files1 = file1Input.files;
+            // FIX: Leggi lo stato dello switch direttamente qui dentro per sicurezza
+            const switchElement = document.getElementById('compareColSwitch');
+            const useSecondCol = switchElement ? switchElement.checked : false;
+            
+            console.log("Stato Switch Colonna 2:", useSecondCol); // Debug
+
+            statusDiv.className = "hidden p-4 rounded-lg text-sm text-center";
+            statusDiv.innerHTML = "";
+
+            if (files1.length === 0) { showStatus("Carica almeno un file sorgente (Box 1).", "error"); return; }
+            if (!storedExclusionFile) { showStatus("Carica il file da escludere (Box 2).", "error"); return; }
+
+            const originalBtnText = processBtn.innerHTML;
+            processBtn.innerHTML = `<span class="loader mr-2"></span> Elaborazione (${files1.length} file)...`;
+            processBtn.disabled = true;
+
+            try {
+                // 1. Leggi il file di esclusione (dalla memoria)
+                const rows2 = await readExcelFile(storedExclusionFile);
+
+                // Set codici da escludere (dal File 2, sempre colonna 1 - index 0)
+                const set2 = new Set();
+                for (let i = 1; i < rows2.length; i++) {
+                    const cell = rows2[i][0];
+                    if (cell !== undefined && cell !== null && cell !== "") {
+                        set2.add(String(cell).trim());
+                    }
+                }
+
+                // 2. Itera su TUTTI i file sorgenti e accumula i risultati
+                const resultRows = [];
+                resultRows.push(["code", "description"]); // Header
+
+                let totalProcessed = 0;
+
+                for (let f = 0; f < files1.length; f++) {
+                    const file = files1[f];
+                    const rows1 = await readExcelFile(file);
+
+                    for (let i = 1; i < rows1.length; i++) {
+                        const row = rows1[i];
+                        const cellA = row[0]; // Colonna 1 (Indice 0)
+                        const cellB = row[1]; // Colonna 2 (Indice 1)
+                        const cellC = row[2]; // Colonna 3 (Indice 2)
+
+                        // Decide quale cella usare come CHIAVE per il confronto
+                        // Switch OFF: usa Col 1 (cellA)
+                        // Switch ON: usa Col 2 (cellB)
+                        const keyCell = useSecondCol ? cellB : cellA;
+
+                        if (keyCell !== undefined && keyCell !== null && keyCell !== "") {
+                            // Se la chiave NON è presente nel set del file 2
+                            if (!set2.has(String(keyCell).trim())) {
+                                if (useSecondCol) {
+                                    // Se Switch ON: Salva Colonna 2 (key) e Colonna 3 (desc)
+                                    resultRows.push([cellB, cellC || ""]);
+                                } else {
+                                    // Se Switch OFF: Salva Colonna 1 (key) e Colonna 2 (desc)
+                                    resultRows.push([cellA, cellB || ""]);
+                                }
+                            }
+                        }
+                    }
+                    totalProcessed++;
+                }
+
+                if (resultRows.length <= 1) {
+                    showStatus("Nessuna differenza trovata in nessuno dei file caricati.", "warning");
+                } else {
+                    const newWs = XLSX.utils.aoa_to_sheet(resultRows);
+                    const newWb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(newWb, newWs, "Risultato");
+                    XLSX.writeFile(newWb, "risultato_differenza_cumulativo.xlsx");
+                    
+                    const colMsg = useSecondCol ? "seconda colonna" : "prima colonna";
+                    showStatus(`Fatto! Elaborati <strong>${totalProcessed}</strong> file. Scaricati <strong>${resultRows.length - 1}</strong> valori unici totali (confronto basato su ${colMsg}).`, "success");
+                }
+            } catch (err) {
+                console.error(err);
+                showStatus("Errore durante l'elaborazione dei file.", "error");
+            } finally {
+                processBtn.innerHTML = originalBtnText;
+                processBtn.disabled = false;
+            }
+        });
+
+        // --- LOGICA AVAILABLE CODE ---
+        const prefixInput = document.getElementById('prefixInput');
+        const fileOccupiedInput = document.getElementById('fileOccupied');
+        const fileOccupiedNameDisplay = document.getElementById('fileOccupied-name');
+        const generateBtn = document.getElementById('generateBtn');
+
+        fileOccupiedInput.addEventListener('change', (e) => { if(e.target.files[0]) fileOccupiedNameDisplay.textContent = e.target.files[0].name; });
+
+        generateBtn.addEventListener('click', async () => {
+            const prefix = prefixInput.value.trim().toUpperCase();
+            const file = fileOccupiedInput.files[0];
+
+            if (prefix.length !== 2) { showStatus("Inserisci un prefisso valido di esattamente 2 caratteri.", "error"); return; }
+            if (!file) { showStatus("Carica il file Excel dei codici occupati.", "error"); return; }
+
+            const originalBtnText = generateBtn.innerHTML;
+            generateBtn.innerHTML = `<span class="loader mr-2"></span> Calcolo...`;
+            generateBtn.disabled = true;
+
+            try {
+                const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                const possibleCodes = [];
+                for (let i = 0; i < chars.length; i++) {
+                    for (let j = 0; j < chars.length; j++) {
+                        possibleCodes.push(prefix + chars[i] + chars[j]);
+                    }
+                }
+
+                const rows = await readExcelFile(file);
+                const occupiedSet = new Set();
+                for (let i = 1; i < rows.length; i++) {
+                    const cell = rows[i][0];
+                    if (cell !== undefined && cell !== null && cell !== "") {
+                        occupiedSet.add(String(cell).trim().toUpperCase());
+                    }
+                }
+
+                const availableCodes = possibleCodes.filter(code => !occupiedSet.has(code));
+
+                if (availableCodes.length === 0) {
+                    showStatus("Nessun codice disponibile trovato! Tutte le combinazioni sono occupate.", "warning");
+                } else {
+                    const exportData = availableCodes.map(c => [c]);
+                    exportData.unshift(["Codici Disponibili"]); 
+                    const newWs = XLSX.utils.aoa_to_sheet(exportData);
+                    const newWb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(newWb, newWs, "Disponibili");
+                    XLSX.writeFile(newWb, `codici_disponibili_${prefix}.xlsx`);
+                    showStatus(`Trovati <strong>${availableCodes.length}</strong> codici liberi su ${possibleCodes.length} totali.`, "success");
+                }
+            } catch (err) {
+                console.error(err);
+                showStatus("Errore durante l'elaborazione del file.", "error");
+            } finally {
+                generateBtn.innerHTML = originalBtnText;
+                generateBtn.disabled = false;
+            }
+        });
+
+        // --- LOGICA CREATE CODES (Nuova) ---
+        const createPrefixInput = document.getElementById('createPrefixInput');
+        const createBtn = document.getElementById('createBtn');
+
+        createBtn.addEventListener('click', () => {
+            const prefix = createPrefixInput.value.trim().toUpperCase();
+
+            // Validazione
+            if (prefix.length !== 2) {
+                showStatus("Inserisci un prefisso valido di esattamente 2 caratteri.", "error");
+                return;
+            }
+
+            const originalBtnText = createBtn.innerHTML;
+            createBtn.innerHTML = `<span class="loader mr-2"></span> Generazione...`;
+            createBtn.disabled = true;
+
+            try {
+                // 1. Genera tutte le combinazioni (36*36 = 1296)
+                const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                const allCodes = [];
+                
+                // Intestazione
+                allCodes.push(["Codici Generati"]);
+
+                for (let i = 0; i < chars.length; i++) {
+                    for (let j = 0; j < chars.length; j++) {
+                        allCodes.push([prefix + chars[i] + chars[j]]);
+                    }
+                }
+
+                // 2. Export immediato
+                const newWs = XLSX.utils.aoa_to_sheet(allCodes);
+                const newWb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(newWb, newWs, "Lista Completa");
+                XLSX.writeFile(newWb, `lista_completa_${prefix}.xlsx`);
+                
+                showStatus(`Fatto! Generati e scaricati <strong>${allCodes.length - 1}</strong> codici.`, "success");
+
+            } catch (err) {
+                console.error(err);
+                showStatus("Errore generico durante la creazione.", "error");
+            } finally {
+                createBtn.innerHTML = originalBtnText;
+                createBtn.disabled = false;
+            }
+        });
+
+    </script>
+</body>
+</html>
