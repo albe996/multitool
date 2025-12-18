@@ -121,7 +121,7 @@
                     Trova Codici Liberi
                 </h1>
                 <p class="text-slate-500 mt-2 text-sm">
-                    Genera codici a 4 cifre (Prefisso + Combinazioni) ed escludi quelli già presenti nel file Excel.
+                    Genera codici a 4 cifre (Prefisso + Combinazioni) ed escludi quelli già presenti nei file Excel caricati.
                 </p>
             </div>
 
@@ -132,17 +132,26 @@
                     <input type="text" id="prefixInput" maxlength="2" placeholder="Es. AA" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase font-mono text-lg tracking-widest text-center">
                 </div>
 
-                <!-- Input File Codici Occupati -->
+                <!-- Input File Codici Occupati (Multiplo) -->
                 <div class="relative group">
-                    <label class="block text-sm font-medium text-slate-700 mb-1">File Codici Occupati (Excel)</label>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">File Codici Occupati (Multiplo)</label>
                     <div class="flex items-center justify-center w-full">
                         <label for="fileOccupied" class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
                             <div class="flex flex-col items-center justify-center pt-5 pb-6">
                                 <i data-lucide="database" class="w-8 h-8 text-slate-400 mb-2"></i>
-                                <p class="text-sm text-slate-500"><span class="font-semibold">Clicca per caricare</span> il file</p>
+                                <p class="text-sm text-slate-500"><span class="font-semibold">Clicca per caricare</span> uno o più file</p>
                                 <p id="fileOccupied-name" class="text-xs text-green-600 mt-1 font-medium h-4"></p>
                             </div>
-                            <input id="fileOccupied" type="file" class="hidden" accept=".xlsx, .xls, .csv" />
+                            <input id="fileOccupied" type="file" class="hidden" accept=".xlsx, .xls, .csv" multiple />
+                        </label>
+                    </div>
+
+                    <!-- Switch per colonna Available -->
+                    <div class="flex items-center justify-end mt-3">
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <span class="me-3 text-sm font-medium text-slate-600">Leggi codici occupati dalla <strong class="text-blue-600">Colonna 2</strong></span>
+                            <input type="checkbox" id="availColSwitch" class="sr-only peer">
+                            <div class="relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                         </label>
                     </div>
                 </div>
@@ -405,20 +414,39 @@
         const fileOccupiedNameDisplay = document.getElementById('fileOccupied-name');
         const generateBtn = document.getElementById('generateBtn');
 
-        fileOccupiedInput.addEventListener('change', (e) => { if(e.target.files[0]) fileOccupiedNameDisplay.textContent = e.target.files[0].name; });
+        // Modifica per file multipli
+        fileOccupiedInput.addEventListener('change', (e) => { 
+            const files = e.target.files;
+            if(files.length > 0) {
+                if(files.length === 1) {
+                    fileOccupiedNameDisplay.textContent = files[0].name;
+                    fileOccupiedNameDisplay.className = "text-xs text-green-600 mt-1 font-medium h-4";
+                } else {
+                    fileOccupiedNameDisplay.textContent = `${files.length} file selezionati`;
+                    fileOccupiedNameDisplay.className = "text-xs text-green-600 mt-1 font-medium h-4 font-bold";
+                }
+            } else {
+                fileOccupiedNameDisplay.textContent = "";
+            }
+        });
 
         generateBtn.addEventListener('click', async () => {
             const prefix = prefixInput.value.trim().toUpperCase();
-            const file = fileOccupiedInput.files[0];
+            const files = fileOccupiedInput.files;
+
+            // Leggi stato switch all'interno del click
+            const switchElement = document.getElementById('availColSwitch');
+            const useSecondCol = switchElement ? switchElement.checked : false;
 
             if (prefix.length !== 2) { showStatus("Inserisci un prefisso valido di esattamente 2 caratteri.", "error"); return; }
-            if (!file) { showStatus("Carica il file Excel dei codici occupati.", "error"); return; }
+            if (files.length === 0) { showStatus("Carica almeno un file Excel dei codici occupati.", "error"); return; }
 
             const originalBtnText = generateBtn.innerHTML;
-            generateBtn.innerHTML = `<span class="loader mr-2"></span> Calcolo...`;
+            generateBtn.innerHTML = `<span class="loader mr-2"></span> Calcolo (${files.length} file)...`;
             generateBtn.disabled = true;
 
             try {
+                // 1. Genera tutte le combinazioni (36*36 = 1296)
                 const chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                 const possibleCodes = [];
                 for (let i = 0; i < chars.length; i++) {
@@ -427,31 +455,46 @@
                     }
                 }
 
-                const rows = await readExcelFile(file);
+                // 2. Leggi codici occupati da TUTTI i file Excel
                 const occupiedSet = new Set();
-                for (let i = 1; i < rows.length; i++) {
-                    const cell = rows[i][0];
-                    if (cell !== undefined && cell !== null && cell !== "") {
-                        occupiedSet.add(String(cell).trim().toUpperCase());
+                
+                for(let f = 0; f < files.length; f++) {
+                    const file = files[f];
+                    const rows = await readExcelFile(file);
+                    
+                    // Salta header (riga 0)
+                    for (let i = 1; i < rows.length; i++) {
+                        // Scegli colonna in base allo switch: 
+                        // OFF = Colonna 0 (A)
+                        // ON  = Colonna 1 (B)
+                        const cell = useSecondCol ? rows[i][1] : rows[i][0];
+                        
+                        if (cell !== undefined && cell !== null && cell !== "") {
+                            occupiedSet.add(String(cell).trim().toUpperCase());
+                        }
                     }
                 }
 
+                // 3. Filtra (Codici Possibili - Codici Occupati)
                 const availableCodes = possibleCodes.filter(code => !occupiedSet.has(code));
 
                 if (availableCodes.length === 0) {
                     showStatus("Nessun codice disponibile trovato! Tutte le combinazioni sono occupate.", "warning");
                 } else {
+                    // 4. Export
                     const exportData = availableCodes.map(c => [c]);
                     exportData.unshift(["Codici Disponibili"]); 
                     const newWs = XLSX.utils.aoa_to_sheet(exportData);
                     const newWb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(newWb, newWs, "Disponibili");
                     XLSX.writeFile(newWb, `codici_disponibili_${prefix}.xlsx`);
-                    showStatus(`Trovati <strong>${availableCodes.length}</strong> codici liberi su ${possibleCodes.length} totali.`, "success");
+                    
+                    const colMsg = useSecondCol ? "seconda colonna" : "prima colonna";
+                    showStatus(`Trovati <strong>${availableCodes.length}</strong> codici liberi su ${possibleCodes.length} totali. (Letti ${files.length} file, esclusione basata su ${colMsg})`, "success");
                 }
             } catch (err) {
                 console.error(err);
-                showStatus("Errore durante l'elaborazione del file.", "error");
+                showStatus("Errore durante l'elaborazione dei file.", "error");
             } finally {
                 generateBtn.innerHTML = originalBtnText;
                 generateBtn.disabled = false;
