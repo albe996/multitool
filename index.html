@@ -33,23 +33,29 @@
     <div class="bg-white rounded-xl shadow-xl p-8 max-w-2xl w-full">
         
         <!-- Tab Navigation -->
-        <div class="flex border-b border-slate-200 mb-8 overflow-x-auto">
-            <button id="tab-diff" class="flex-1 pb-4 text-center font-semibold text-blue-600 border-b-2 border-blue-600 hover:text-blue-800 transition-colors active-tab min-w-[120px]">
-                <div class="flex items-center justify-center gap-2">
+        <div class="flex border-b border-slate-200 mb-8 overflow-x-auto pb-1 gap-1">
+            <button id="tab-diff" class="flex-1 pb-3 text-center font-semibold text-blue-600 border-b-2 border-blue-600 hover:text-blue-800 transition-colors active-tab min-w-[90px] text-sm">
+                <div class="flex flex-col md:flex-row items-center justify-center gap-2">
                     <i data-lucide="arrow-left-right" class="w-4 h-4"></i>
                     Comparatore
                 </div>
             </button>
-            <button id="tab-avail" class="flex-1 pb-4 text-center font-semibold text-slate-500 hover:text-slate-800 transition-colors min-w-[120px]">
-                <div class="flex items-center justify-center gap-2">
+            <button id="tab-avail" class="flex-1 pb-3 text-center font-semibold text-slate-500 hover:text-slate-800 transition-colors min-w-[90px] text-sm">
+                <div class="flex flex-col md:flex-row items-center justify-center gap-2">
                     <i data-lucide="calculator" class="w-4 h-4"></i>
                     Disponibili
                 </div>
             </button>
-            <button id="tab-create" class="flex-1 pb-4 text-center font-semibold text-slate-500 hover:text-slate-800 transition-colors min-w-[120px]">
-                <div class="flex items-center justify-center gap-2">
+            <button id="tab-create" class="flex-1 pb-3 text-center font-semibold text-slate-500 hover:text-slate-800 transition-colors min-w-[90px] text-sm">
+                <div class="flex flex-col md:flex-row items-center justify-center gap-2">
                     <i data-lucide="grid" class="w-4 h-4"></i>
-                    Crea Codici
+                    Crea
+                </div>
+            </button>
+            <button id="tab-dup" class="flex-1 pb-3 text-center font-semibold text-slate-500 hover:text-slate-800 transition-colors min-w-[90px] text-sm">
+                <div class="flex flex-col md:flex-row items-center justify-center gap-2">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                    Duplicati
                 </div>
             </button>
         </div>
@@ -164,7 +170,7 @@
             </div>
         </div>
 
-        <!-- VIEW 3: CREATE CODES (NEW) -->
+        <!-- VIEW 3: CREATE CODES -->
         <div id="view-create" class="hidden">
             <div class="text-center mb-6">
                 <h1 class="text-2xl font-bold text-slate-800 flex items-center justify-center gap-3">
@@ -190,6 +196,50 @@
             </div>
         </div>
 
+        <!-- VIEW 4: DUPLICATES (NEW) -->
+        <div id="view-duplicates" class="hidden">
+            <div class="text-center mb-6">
+                <h1 class="text-2xl font-bold text-slate-800 flex items-center justify-center gap-3">
+                    Trova Duplicati
+                </h1>
+                <p class="text-slate-500 mt-2 text-sm">
+                    Carica file e trova i codici che si ripetono, scaricando i dettagli completi.
+                </p>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Input File Duplicati (Multiplo) -->
+                <div class="relative group">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">File da Analizzare (Multiplo)</label>
+                    <div class="flex items-center justify-center w-full">
+                        <label for="fileDup" class="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
+                            <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                                <i data-lucide="files" class="w-8 h-8 text-orange-400 mb-2"></i>
+                                <p class="text-sm text-slate-500"><span class="font-semibold">Clicca per caricare</span> uno o più file</p>
+                                <p id="fileDup-name" class="text-xs text-green-600 mt-1 font-medium h-4"></p>
+                            </div>
+                            <input id="fileDup" type="file" class="hidden" accept=".xlsx, .xls, .csv" multiple />
+                        </label>
+                    </div>
+
+                    <!-- Switch per colonna Duplicati -->
+                    <div class="flex items-center justify-end mt-3">
+                        <label class="inline-flex items-center cursor-pointer select-none">
+                            <span class="me-3 text-sm font-medium text-slate-600">Cerca duplicati nella <strong class="text-blue-600">Colonna 2</strong></span>
+                            <input type="checkbox" id="dupColSwitch" class="sr-only peer">
+                            <div class="relative w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Azione -->
+                <button id="dupBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-4 rounded-lg shadow transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span>Trova Duplicati e Scarica</span>
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+
         <!-- Status Messages (Shared) -->
         <div id="statusMessage" class="hidden mt-6 p-4 rounded-lg text-sm text-center"></div>
     </div>
@@ -202,12 +252,14 @@
         const tabs = {
             diff: document.getElementById('tab-diff'),
             avail: document.getElementById('tab-avail'),
-            create: document.getElementById('tab-create')
+            create: document.getElementById('tab-create'),
+            dup: document.getElementById('tab-dup')
         };
         const views = {
             diff: document.getElementById('view-compare'),
             avail: document.getElementById('view-available'),
-            create: document.getElementById('view-create')
+            create: document.getElementById('view-create'),
+            dup: document.getElementById('view-duplicates')
         };
         
         const statusDiv = document.getElementById('statusMessage');
@@ -236,6 +288,7 @@
         tabs.diff.addEventListener('click', () => switchTab('diff'));
         tabs.avail.addEventListener('click', () => switchTab('avail'));
         tabs.create.addEventListener('click', () => switchTab('create'));
+        tabs.dup.addEventListener('click', () => switchTab('dup'));
 
         // --- SHARED FUNCTIONS ---
         function showStatus(msg, type) {
@@ -501,7 +554,7 @@
             }
         });
 
-        // --- LOGICA CREATE CODES (Nuova) ---
+        // --- LOGICA CREATE CODES ---
         const createPrefixInput = document.getElementById('createPrefixInput');
         const createBtn = document.getElementById('createBtn');
 
@@ -546,6 +599,108 @@
             } finally {
                 createBtn.innerHTML = originalBtnText;
                 createBtn.disabled = false;
+            }
+        });
+
+        // --- LOGICA DUPLICATI (Nuova) ---
+        const fileDupInput = document.getElementById('fileDup');
+        const fileDupNameDisplay = document.getElementById('fileDup-name');
+        const dupBtn = document.getElementById('dupBtn');
+
+        fileDupInput.addEventListener('change', (e) => { 
+            const files = e.target.files;
+            if(files.length > 0) {
+                if(files.length === 1) {
+                    fileDupNameDisplay.textContent = files[0].name;
+                    fileDupNameDisplay.className = "text-xs text-green-600 mt-1 font-medium h-4";
+                } else {
+                    fileDupNameDisplay.textContent = `${files.length} file selezionati`;
+                    fileDupNameDisplay.className = "text-xs text-green-600 mt-1 font-medium h-4 font-bold";
+                }
+            } else {
+                fileDupNameDisplay.textContent = "";
+            }
+        });
+
+        dupBtn.addEventListener('click', async () => {
+            const files = fileDupInput.files;
+            // Leggi stato switch all'interno del click
+            const switchElement = document.getElementById('dupColSwitch');
+            const useSecondCol = switchElement ? switchElement.checked : false;
+
+            if (files.length === 0) { showStatus("Carica almeno un file per cercare duplicati.", "error"); return; }
+
+            const originalBtnText = dupBtn.innerHTML;
+            dupBtn.innerHTML = `<span class="loader mr-2"></span> Analisi (${files.length} file)...`;
+            dupBtn.disabled = true;
+
+            try {
+                // Mappa per contare le occorrenze: Map<Code, Count>
+                const counts = new Map();
+                // Array per conservare TUTTE le righe originali e poterle ristampare
+                // Struttura: { key: string, data: array (riga intera) }
+                const allRows = [];
+
+                for (let f = 0; f < files.length; f++) {
+                    const file = files[f];
+                    const rows = await readExcelFile(file);
+
+                    // Salta header (riga 0)
+                    for (let i = 1; i < rows.length; i++) {
+                        const row = rows[i];
+                        // Determina la chiave (Col 0 o Col 1)
+                        const rawKey = useSecondCol ? row[1] : row[0];
+
+                        if (rawKey !== undefined && rawKey !== null && rawKey !== "") {
+                            const key = String(rawKey).trim();
+                            
+                            // Aggiorna conteggio
+                            counts.set(key, (counts.get(key) || 0) + 1);
+
+                            // Salva la riga per il processamento successivo
+                            // Dobbiamo salvare quali colonne esportare. 
+                            // Se analizziamo Col 0 -> Esportiamo Col 0, 1, 2...
+                            // Se analizziamo Col 1 -> Esportiamo Col 1, 2, 3...
+                            
+                            const startIndex = useSecondCol ? 1 : 0;
+                            const exportData = row.slice(startIndex); // Prendi da indice chiave in poi
+                            
+                            allRows.push({
+                                key: key,
+                                data: exportData
+                            });
+                        }
+                    }
+                }
+
+                // Filtra solo le righe che hanno una chiave duplicata (count > 1)
+                const duplicates = allRows.filter(item => counts.get(item.key) > 1);
+
+                if (duplicates.length === 0) {
+                    showStatus("Nessun duplicato trovato nei file analizzati.", "warning");
+                } else {
+                    // Prepara dati per Excel
+                    const exportRows = duplicates.map(item => item.data);
+                    
+                    // Intestazione dinamica
+                    const header = ["Codice Duplicato", "Dati Successivi..."];
+                    exportRows.unshift(header);
+
+                    const newWs = XLSX.utils.aoa_to_sheet(exportRows);
+                    const newWb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(newWb, newWs, "Duplicati");
+                    XLSX.writeFile(newWb, `report_duplicati.xlsx`);
+                    
+                    const colMsg = useSecondCol ? "seconda colonna" : "prima colonna";
+                    showStatus(`Trovati <strong>${duplicates.length}</strong> record duplicati totali (basati su ${colMsg}).`, "success");
+                }
+
+            } catch (err) {
+                console.error(err);
+                showStatus("Errore durante l'analisi dei file.", "error");
+            } finally {
+                dupBtn.innerHTML = originalBtnText;
+                dupBtn.disabled = false;
             }
         });
 
